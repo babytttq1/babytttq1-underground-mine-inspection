@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">煤矿井下无感行人重识别系统</string>
+    <string name="title_activity_main">煤矿井下无感行人重识别系统</string>
+    <string name="package_name">com.mine.safety.mobile</string>
+    <string name="custom_url_scheme">com.mine.safety.mobile</string>
+</resources>

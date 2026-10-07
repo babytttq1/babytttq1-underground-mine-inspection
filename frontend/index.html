@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>煤矿井下无感行人重识别系统</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@2.6.3/dist/index.css" />
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/element-plus@2.6.3/dist/index.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/element-plus@2.6.3/dist/locale/zh-cn.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Microsoft YaHei", Arial, sans-serif; background: #f4f6f9; }
+    #app { min-height: 100vh; display: flex; flex-direction: column; }
+
+    .topbar {
+      background: linear-gradient(90deg, #1f2d3d, #34495e);
+      color: #fff; padding: 14px 24px; display: flex; align-items: center;
+      justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    }
+    .topbar h1 { font-size: 18px; margin: 0; letter-spacing: 1px; }
+    .topbar .right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+
+    .layout { flex: 1; display: flex; }
+    .sidebar {
+      width: 200px; background: #2c3e50; color: #bdc3c7; padding-top: 10px;
+    }
+    .sidebar .menu-item {
+      padding: 14px 20px; cursor: pointer; font-size: 14px; border-left: 3px solid transparent;
+    }
+    .sidebar .menu-item:hover { background: #34495e; color: #fff; }
+    .sidebar .menu-item.active {
+      background: #34495e; color: #fff; border-left-color: #409eff;
+    }
+
+    .content { flex: 1; padding: 20px; overflow: auto; }
+    .card { background: #fff; border-radius: 6px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 16px; }
+    .card h3 { margin: 0 0 14px; font-size: 15px; color: #303133; border-left: 4px solid #409eff; padding-left: 8px; }
+
+    .stat-row { display: flex; gap: 16px; margin-bottom: 16px; }
+    .stat {
+      flex: 1; background: #fff; border-radius: 6px; padding: 18px; text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .stat .num { font-size: 28px; font-weight: bold; color: #409eff; }
+    .stat .label { font-size: 13px; color: #909399; margin-top: 6px; }
+    .stat.warn .num { color: #e6a23c; }
+    .stat.danger .num { color: #f56c6c; }
+    .stat.ok .num { color: #67c23a; }
+
+    .login-wrap {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 30% 30%, #34495e, #1f2d3d);
+    }
+    .login-box {
+      width: 360px; background: #fff; border-radius: 8px; padding: 30px 28px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .login-box h2 { text-align: center; margin: 0 0 24px; color: #303133; font-size: 18px; }
+
+    .table-actions { display: flex; gap: 8px; }
+    .upload-box { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .preview { max-width: 260px; margin-top: 10px; border-radius: 4px; }
+    .hint { font-size: 12px; color: #909399; margin-top: 6px; }
+    .upload-progress { margin-top: 10px; padding: 8px 10px; color: #409eff; background: #ecf5ff; border-radius: 4px; font-size: 13px; }
+    pre.result { background: #f5f7fa; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 320px; }
+    .mobile-menu-button, .mobile-nav, .drawer-mask { display: none; }
+
+    @media (max-width: 768px) {
+      body { overflow-x: hidden; padding-bottom: env(safe-area-inset-bottom); }
+      .topbar { min-height: 58px; padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top)); }
+      .topbar h1 { font-size: 15px; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .topbar .right { gap: 6px; font-size: 11px; }
+      .topbar .right span { max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mobile-menu-button { display: inline-flex; margin-right: 8px; color: #fff; background: transparent; border: 0; font-size: 22px; padding: 6px; }
+      .layout { display: block; }
+      .sidebar { position: fixed; z-index: 30; top: 0; bottom: 0; left: 0; width: 245px; padding-top: calc(64px + env(safe-area-inset-top)); transform: translateX(-105%); transition: transform .2s ease; box-shadow: 4px 0 16px rgba(0,0,0,.2); }
+      .sidebar.open { transform: translateX(0); }
+      .drawer-mask { display: block; position: fixed; z-index: 20; inset: 0; background: rgba(0,0,0,.42); }
+      .content { width: 100%; padding: 12px 10px 82px; overflow-x: hidden; }
+      .card { padding: 14px 12px; margin-bottom: 12px; border-radius: 8px; overflow: hidden; }
+      .card h3 { font-size: 14px; }
+      .stat-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .stat { padding: 12px 6px; }
+      .stat .num { font-size: 23px; }
+      .stat .label { font-size: 12px; }
+      .upload-box { align-items: stretch; flex-direction: column; gap: 10px; }
+      .upload-box > *, .upload-box .el-select { width: 100% !important; max-width: none; }
+      .el-form--inline { display: flex; flex-direction: column; align-items: stretch; }
+      .el-form--inline .el-form-item { margin-right: 0; margin-bottom: 10px; }
+      .el-form--inline .el-form-item, .el-form--inline .el-form-item .el-form-item__content { width: 100%; }
+      .el-form--inline .el-form-item .el-input, .el-form--inline .el-form-item .el-select { width: 100% !important; }
+      .el-button { min-height: 42px; padding-left: 16px; padding-right: 16px; }
+      .el-input__wrapper, .el-select__wrapper { min-height: 42px; }
+      .el-table { min-width: 760px; }
+      .el-table__body-wrapper, .el-table__header-wrapper { overflow-x: auto; }
+      .card:has(.el-table) { overflow-x: auto; }
+      .login-box { width: calc(100vw - 32px); padding: 24px 18px; }
+      .mobile-nav { display: flex; position: fixed; z-index: 25; left: 0; right: 0; bottom: 0; min-height: 62px; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: #fff; box-shadow: 0 -2px 12px rgba(0,0,0,.14); justify-content: space-around; }
+      .mobile-nav .menu-item { flex: 1; min-width: 0; padding: 5px 2px; text-align: center; color: #606266; font-size: 11px; cursor: pointer; }
+      .mobile-nav .menu-item.active { color: #409eff; font-weight: 600; }
+      .mobile-nav .menu-item::first-letter { font-size: 18px; }
+      .mobile-nav .more { flex: 0 0 46px; }
+      .drawer-title { display: flex; justify-content: space-between; padding: 0 16px 12px; color: #fff; font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 顶部栏 -->
+  <div class="topbar">
+    <button class="mobile-menu-button" v-if="token" @click="mobileMenuOpen = true" aria-label="打开菜单">☰</button>
+    <h1>⛏️ 煤矿井下无感行人重识别系统</h1>
+    <div class="right" v-if="token">
+      <span>{{ userName }}（{{ roleName }}）</span>
+      <el-button size="small" type="danger" plain @click="logout">退出</el-button>
+    </div>
+  </div>
+
+  <!-- 未登录：登录页 -->
+  <div class="login-wrap" v-if="!token">
+    <div class="login-box">
+      <h2>用户登录</h2>
+      <el-form :model="loginForm" label-width="70px">
+        <el-form-item label="用户名">
+          <el-input v-model="loginForm.username" placeholder="admin / guard / miner" />
+        </el-form-item>
+        <el-form-item label="密码">
+          <el-input v-model="loginForm.password" type="password" show-password placeholder="123456" />
+        </el-form-item>
+        <el-button type="primary" style="width:100%" :loading="loading" @click="doLogin">登 录</el-button>
+      </el-form>
+      <div class="hint">默认账号：admin / guard / miner，密码均为 123456</div>
+    </div>
+  </div>
+
+  <!-- 已登录：主界面 -->
+  <div class="layout" v-else>
+    <div class="drawer-mask" v-if="mobileMenuOpen" @click="mobileMenuOpen = false"></div>
+    <div class="sidebar" :class="{ open: mobileMenuOpen }">
+      <div class="drawer-title" v-if="mobileMenuOpen"><span>功能菜单</span><span @click="mobileMenuOpen = false">×</span></div>
+      <div v-for="m in menus" :key="m.key"
+           class="menu-item" :class="{ active: page === m.key }"
+           @click="switchPage(m.key); mobileMenuOpen = false">
+        {{ m.label }}
+      </div>
+    </div>
+
+    <div class="mobile-nav">
+      <div v-for="m in mobileMenus" :key="m.key" class="menu-item" :class="{ active: page === m.key }" @click="switchPage(m.key)">{{ m.label }}</div>
+      <div class="menu-item more" @click="mobileMenuOpen = true">☰<br>更多</div>
+    </div>
+
+    <div class="content">
+
+      <!-- 总览 -->
+      <div v-if="page === 'dashboard'">
+        <div class="stat-row">
+          <div class="stat ok"><div class="num">{{ stat.total }}</div><div class="label">注册人员</div></div>
+          <div class="stat warn"><div class="num">{{ stat.underground }}</div><div class="label">当前井下</div></div>
+          <div class="stat"><div class="num">{{ stat.cameras }}</div><div class="label">摄像头</div></div>
+          <div class="stat danger"><div class="num">{{ stat.alerts }}</div><div class="label">未处理告警</div></div>
+        </div>
+        <div class="card" v-if="role === 'miner' && persons.length">
+          <h3>我的信息</h3>
+          <p>人员编号：{{ persons[0].person_id }}</p>
+          <p>姓名：{{ persons[0].name }}</p>
+          <p>部门：{{ persons[0].department || '-' }}</p>
+          <p>当前状态：<el-tag :type="statusType(persons[0].status)">{{ statusText(persons[0].status) }}</el-tag></p>
+        </div>
+        <div class="card">
+          <h3>接口自检</h3>
+          <el-button @click="checkHealth">测试 /api/health</el-button>
+          <pre class="result" v-if="healthResult">{{ healthResult }}</pre>
+        </div>
+      </div>
+
+      <!-- 人员管理 -->
+      <div v-if="page === 'persons' && role === 'admin'">
+        <div class="card">
+          <h3>新增人员</h3>
+          <el-form :inline="true" :model="personForm">
+            <el-form-item label="姓名">
+              <el-input v-model="personForm.name" placeholder="张三" style="width:140px" />
+            </el-form-item>
+            <el-form-item label="部门">
+              <el-input v-model="personForm.department" placeholder="采掘组" style="width:140px" />
+            </el-form-item>
+            <el-button type="primary" @click="createPerson">添加</el-button>
+          </el-form>
+        </div>
+
+        <div class="card">
+          <h3>人员列表</h3>
+          <el-table :data="persons" border stripe size="small" style="width: 100%">
+            <el-table-column label="ID" width="90">
+              <template #default="{ row }">{{ row.person_id }}</template>
+            </el-table-column>
+            <el-table-column label="姓名" min-width="100">
+              <template #default="{ row }">{{ row.name }}</template>
+            </el-table-column>
+            <el-table-column label="部门" min-width="120">
+              <template #default="{ row }">{{ row.department || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="statusType(displayStatus(row))">{{ statusText(displayStatus(row)) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="人脸特征" min-width="180" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.face_feature_path || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="创建时间" width="180">
+              <template #default="{ row }">{{ row.created_at }}</template>
+            </el-table-column>
+            <el-table-column label="在职状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.employment_status === 'active' ? 'success' : 'info'">{{ row.employment_status === 'active' ? '在职' : '已停用' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="100">
+              <template #default="{ row }">
+                <el-button size="small" @click="togglePerson(row)">{{ row.employment_status === 'active' ? '停用' : '恢复' }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div class="card">
+          <h3>人脸注册</h3>
+          <div class="upload-box">
+            <el-select v-model="facePersonId" placeholder="选择人员" style="width:160px">
+              <el-option v-for="p in persons" :key="p.person_id" :label="p.person_id + ' - ' + p.name" :value="p.person_id"></el-option>
+            </el-select>
+            <input type="file" accept="image/*" @change="e => faceFile = e.target.files[0]" />
+            <el-button type="primary" :disabled="faceUploading || !facePersonId || !faceFile" :loading="faceUploading" @click="registerFace">上传并提取特征</el-button>
+          </div>
+          <div v-if="faceProgress > 0" class="upload-progress">正在上传：{{ faceProgress }}%</div>
+          <pre class="result" v-if="faceResult">{{ faceResult }}</pre>
+        </div>
+      </div>
+
+      <!-- 人脸识别 -->
+      <div v-if="page === 'recognize' && (role === 'admin' || role === 'guard')">
+        <div class="card">
+          <h3>井口人脸识别</h3>
+          <div class="upload-box">
+            <el-select v-model="recognizeCamera" style="width:180px">
+              <el-option v-for="c in cameras" :key="c.camera_id" :label="c.camera_id + ' - ' + c.camera_name" :value="c.camera_id"></el-option>
+            </el-select>
+            <input type="file" accept="image/*" @change="e => recognizeFile = e.target.files[0]" />
+            <el-button type="primary" :disabled="recognizeUploading || !recognizeFile" :loading="recognizeUploading" @click="doRecognize">识别</el-button>
+          </div>
+          <div v-if="recognizeProgress > 0" class="upload-progress">正在上传：{{ recognizeProgress }}%</div>
+          <pre class="result" v-if="recognizeResult">{{ recognizeResult }}</pre>
+        </div>
+
+        <div class="card">
+          <h3>视频识别（行人检测 + 重识别）</h3>
+          <div class="upload-box">
+            <el-select v-model="videoCamera" style="width:180px">
+              <el-option v-for="c in cameras" :key="c.camera_id" :label="c.camera_id + ' - ' + c.camera_name" :value="c.camera_id"></el-option>
+            </el-select>
+            <input type="file" accept="video/*" @change="e => videoFile = e.target.files[0]" />
+            <el-button type="primary" :disabled="!videoFile" :loading="videoLoading" @click="doVideoRecognize">上传并分析</el-button>
+          </div>
+          <div v-if="videoProgress > 0" class="upload-progress">正在上传：{{ videoProgress }}%</div>
+          <div class="hint">视频分析依赖 ultralytics YOLO，未安装时会保存文件但不分析。</div>
+          <pre class="result" v-if="videoResult">{{ videoResult }}</pre>
+        </div>
+      </div>
+
+      <!-- 出入井 -->
+      <div v-if="page === 'records'">
+        <div class="card" v-if="role === 'miner' && persons.length">
+          <h3>我的人员信息</h3>
+          <el-descriptions :column="3" border size="small">
+            <el-descriptions-item label="人员ID">{{ persons[0].person_id }}</el-descriptions-item>
+            <el-descriptions-item label="姓名">{{ persons[0].name }}</el-descriptions-item>
+            <el-descriptions-item label="部门">{{ persons[0].department || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="当前状态">
+              <el-tag :type="statusType(displayStatus(persons[0]))">{{ statusText(displayStatus(persons[0])) }}</el-tag>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <div class="card">
+          <h3 v-if="role === 'admin' || role === 'guard'">新增出入井记录</h3>
+          <el-form v-if="role === 'admin' || role === 'guard'" :inline="true" :model="recordForm">
+            <el-form-item label="人员">
+              <el-select v-model="recordForm.person_id" style="width:170px">
+                <el-option v-for="p in persons" :key="p.person_id" :label="p.person_id + ' - ' + p.name" :value="p.person_id"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="类型">
+              <el-select v-model="recordForm.record_type" style="width:110px">
+                <el-option label="入井" value="IN"></el-option>
+                <el-option label="出井" value="OUT"></el-option>
+                <el-option label="未知" value="UNKNOWN"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="摄像头">
+              <el-select v-model="recordForm.camera_id" style="width:170px">
+                <el-option v-for="c in cameras" :key="c.camera_id" :label="c.camera_id + ' - ' + c.camera_name" :value="c.camera_id"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-button type="primary" @click="createRecord">提交</el-button>
+          </el-form>
+        </div>
+
+        <div class="card">
+          <h3>出入井记录</h3>
+          <el-table :data="records" border stripe size="small" style="width: 100%">
+            <el-table-column label="ID" width="70">
+              <template #default="{ row }">{{ row.record_id }}</template>
+            </el-table-column>
+            <el-table-column label="人员ID" width="100">
+              <template #default="{ row }">{{ row.person_id }}</template>
+            </el-table-column>
+            <el-table-column label="姓名" width="100">
+              <template #default="{ row }">{{ row.name }}</template>
+            </el-table-column>
+            <el-table-column label="部门" width="110">
+              <template #default="{ row }">{{ row.department || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="类型" width="90">
+              <template #default="{ row }">
+                <el-tag :type="row.record_type === 'IN' ? 'warning' : (row.record_type === 'OUT' ? 'success' : 'info')">
+                  {{ row.record_type === 'IN' ? '入井' : (row.record_type === 'OUT' ? '出井' : '未知') }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="摄像头" min-width="150">
+              <template #default="{ row }">{{ row.camera_name || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="地点" min-width="110">
+              <template #default="{ row }">{{ row.location || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="置信度" width="90">
+              <template #default="{ row }">{{ row.confidence ?? '-' }}</template>
+            </el-table-column>
+            <el-table-column label="时间" width="180">
+              <template #default="{ row }">{{ row.record_time }}</template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- 告警 -->
+      <div v-if="page === 'alerts' && (role === 'admin' || role === 'guard')">
+        <div class="card">
+          <h3>告警列表</h3>
+          <el-table :data="alerts" border stripe size="small" style="width: 100%">
+            <el-table-column label="ID" width="70">
+              <template #default="{ row }">{{ row.alert_id }}</template>
+            </el-table-column>
+            <el-table-column label="类型" width="110">
+              <template #default="{ row }">{{ row.alert_type }}</template>
+            </el-table-column>
+            <el-table-column label="人员" width="100">
+              <template #default="{ row }">{{ row.person_id || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="姓名" width="100">
+              <template #default="{ row }">{{ row.name || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="地点" width="110">
+              <template #default="{ row }">{{ row.location || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="描述" min-width="220" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.description || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'unhandled' ? 'danger' : 'success'">
+                  {{ row.status === 'unhandled' ? '未处理' : '已处理' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="时间" width="180">
+              <template #default="{ row }">{{ row.alert_time }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="140">
+              <template #default="{ row }">
+                <el-button v-if="row.status === 'unhandled'" size="small" type="primary" @click="handleAlert(row)">处理</el-button>
+                <span v-else>{{ row.handler || '-' }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- 摄像头 -->
+      <div v-if="page === 'users' && role === 'admin'">
+        <div class="card">
+          <h3>创建账号</h3>
+          <el-form :inline="true" :model="userForm">
+            <el-form-item label="用户名"><el-input v-model="userForm.username" placeholder="例如 miner01" /></el-form-item>
+            <el-form-item label="初始密码"><el-input v-model="userForm.password" type="password" /></el-form-item>
+            <el-form-item label="角色">
+              <el-select v-model="userForm.role" style="width:150px">
+                <el-option label="系统管理员" value="admin"></el-option>
+                <el-option label="井口安检员" value="guard"></el-option>
+                <el-option label="井下作业人员" value="miner"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item v-if="userForm.role === 'miner'" label="关联人员">
+              <el-select v-model="userForm.person_id" placeholder="选择人员" style="width:170px">
+                <el-option v-for="p in persons" :key="p.person_id" :label="p.person_id + ' - ' + p.name" :value="p.person_id"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-button type="primary" @click="createUser">创建</el-button>
+          </el-form>
+        </div>
+        <div class="card">
+          <h3>账号列表</h3>
+          <el-table :data="users" border stripe size="small">
+            <el-table-column prop="username" label="用户名" />
+            <el-table-column label="角色"><template #default="{ row }">{{ roleText(row.role) }}</template></el-table-column>
+            <el-table-column label="关联人员"><template #default="{ row }">{{ row.person_id ? row.person_id + ' - ' + (row.name || '') : '-' }}</template></el-table-column>
+            <el-table-column prop="status" label="状态" />
+            <el-table-column label="操作"><template #default="{ row }"><el-button size="small" @click="toggleUser(row)">{{ row.status === 'active' ? '禁用' : '启用' }}</el-button></template></el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- 摄像头 -->
+      <div v-if="page === 'cameras' && (role === 'admin' || role === 'guard')">
+        <div class="card">
+          <h3>摄像头列表</h3>
+          <el-table :data="cameras" border stripe size="small" style="width: 100%">
+            <el-table-column label="ID" width="100">
+              <template #default="{ row }">{{ row.camera_id }}</template>
+            </el-table-column>
+            <el-table-column label="名称" min-width="180">
+              <template #default="{ row }">{{ row.camera_name }}</template>
+            </el-table-column>
+            <el-table-column label="位置" min-width="150">
+              <template #default="{ row }">{{ row.location }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'online' ? 'success' : 'info'">
+                  {{ row.status === 'online' ? '在线' : '离线' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, reactive, ref, onMounted, computed } = Vue;
+
+// 所有客户端统一访问云服务器；正式环境建议替换为 HTTPS 域名。
+const API = "http://120.26.89.44:5000";
+createApp({
+  setup() {
+    const token = ref("");
+    const userName = ref("");
+    const role = ref("");
+    const roleName = computed(() => ({
+      admin: "系统管理员",
+      guard: "井口安检员",
+      miner: "井下作业人员"
+    }[role.value] || role.value));
+
+    const loading = ref(false);
+    const mobileMenuOpen = ref(false);
+    const loginForm = reactive({ username: "admin", password: "123456" });
+    const page = ref("dashboard");
+    const allMenus = [
+      { key: "dashboard", label: "🏠 系统总览" },
+      { key: "persons", label: "👤 人员管理" },
+      { key: "recognize", label: "🎯 识别中心" },
+      { key: "records", label: "🚪 出入井记录" },
+      { key: "alerts", label: "🚨 告警管理" },
+      { key: "cameras", label: "📷 摄像头" },
+      { key: "users", label: "🔐 账号管理" }
+    ];
+    const menus = computed(() => {
+      if (role.value === "admin") return allMenus;
+      if (role.value === "guard") return allMenus.filter(m => ["dashboard", "recognize", "records", "alerts"].includes(m.key));
+      if (role.value === "miner") return allMenus.filter(m => ["dashboard", "records"].includes(m.key));
+      return [];
+    });
+    const mobileMenus = computed(() => menus.value.filter(m => ["dashboard", "recognize", "records", "alerts"].includes(m.key)).slice(0, 4));
+
+    const stat = reactive({ total: 0, underground: 0, cameras: 0, alerts: 0 });
+    const healthResult = ref("");
+    const persons = ref([]);
+    const cameras = ref([]);
+    const records = ref([]);
+    const alerts = ref([]);
+    const users = ref([]);
+    const userForm = reactive({ username: "", password: "", role: "miner", person_id: "" });
+
+    const personForm = reactive({ name: "", department: "" });
+    const facePersonId = ref("");
+    const faceFile = ref(null);
+    const faceResult = ref("");
+    const faceProgress = ref(0);
+    const faceUploading = ref(false);
+
+    const recognizeCamera = ref("C001");
+    const recognizeFile = ref(null);
+    const recognizeResult = ref("");
+    const recognizeProgress = ref(0);
+    const recognizeUploading = ref(false);
+
+    const videoCamera = ref("C002");
+    const videoFile = ref(null);
+    const videoResult = ref("");
+    const videoLoading = ref(false);
+    const videoProgress = ref(0);
+
+    const recordForm = reactive({ person_id: "", record_type: "IN", camera_id: "C001" });
+
+    async function api(path, options = {}) {
+      options.headers = { ...(options.headers || {}) };
+      if (token.value) options.headers.Authorization = `Bearer ${token.value}`;
+      const res = await fetch(API + path, options);
+      const text = await res.text();
+      let data;
+      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+      if (!res.ok) throw new Error((data && (data.detail || data.error)) || res.statusText);
+      return data;
+    }
+
+    function uploadApi(path, formData, progressRef) {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", API + path);
+        if (token.value) xhr.setRequestHeader("Authorization", `Bearer ${token.value}`);
+        progressRef.value = 1;
+        xhr.upload.onprogress = event => {
+          if (event.lengthComputable) progressRef.value = Math.min(99, Math.round(event.loaded / event.total * 100));
+        };
+        xhr.onload = () => {
+          let data = null;
+          try { data = xhr.responseText ? JSON.parse(xhr.responseText) : null; } catch { data = xhr.responseText; }
+          if (xhr.status >= 200 && xhr.status < 300) {
+            progressRef.value = 100;
+            resolve(data);
+          } else {
+            reject(new Error((data && (data.detail || data.error)) || xhr.statusText || `HTTP ${xhr.status}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error("网络连接失败，请检查服务器和网络"));
+        xhr.onabort = () => reject(new Error("上传已取消"));
+        xhr.send(formData);
+      });
+    }
+
+    async function doLogin() {
+      loading.value = true;
+      try {
+        const data = await api("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(loginForm)
+        });
+        token.value = data.token;
+        userName.value = data.name;
+        role.value = data.role;
+        ElementPlus.ElMessage.success("登录成功");
+        await refreshAll();
+      } catch (e) {
+        ElementPlus.ElMessage.error("登录失败：" + e.message);
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    function logout() {
+      token.value = "";
+      userName.value = "";
+      role.value = "";
+    }
+
+    function switchPage(key) {
+      if (!menus.value.some(m => m.key === key)) return;
+      page.value = key;
+      refreshAll();
+    }
+
+    async function refreshAll() {
+      if (!token.value) return;
+      try {
+        persons.value = await api("/api/persons");
+        records.value = await api("/api/records/in-out");
+        if (role.value !== "miner") {
+          cameras.value = await api("/api/cameras");
+          alerts.value = await api("/api/alerts");
+          if (role.value === "admin") users.value = await api("/api/users");
+        } else {
+          cameras.value = [];
+          alerts.value = [];
+        }
+        stat.total = persons.value.length;
+        stat.underground = persons.value.filter(p => p.status === "underground").length;
+        stat.cameras = cameras.value.length;
+        stat.alerts = alerts.value.filter(a => a.status === "unhandled").length;
+      } catch (e) {
+        console.warn("刷新失败：", e.message);
+      }
+    }
+
+    async function checkHealth() {
+      try {
+        const data = await api("/api/health");
+        healthResult.value = JSON.stringify(data, null, 2);
+      } catch (e) {
+        healthResult.value = "失败：" + e.message;
+      }
+    }
+
+    async function createPerson() {
+      if (!personForm.name) return ElementPlus.ElMessage.warning("请填写姓名");
+      try {
+        await api("/api/persons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: personForm.name, department: personForm.department })
+        });
+        ElementPlus.ElMessage.success("添加成功");
+        personForm.name = ""; personForm.department = "";
+        await refreshAll();
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message);
+      }
+    }
+
+    async function registerFace() {
+      faceUploading.value = true;
+      faceProgress.value = 0;
+      const fd = new FormData();
+      fd.append("file", faceFile.value);
+      try {
+        const data = await uploadApi(`/api/persons/${facePersonId.value}/face`, fd, faceProgress);
+        faceResult.value = JSON.stringify(data, null, 2);
+        ElementPlus.ElMessage.success("特征提取完成");
+        await refreshAll();
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message);
+      } finally {
+        faceUploading.value = false;
+      }
+    }
+
+    async function doRecognize() {
+      recognizeUploading.value = true;
+      recognizeProgress.value = 0;
+      const fd = new FormData();
+      fd.append("file", recognizeFile.value);
+      fd.append("camera_id", recognizeCamera.value);
+      try {
+        const data = await uploadApi("/api/face/recognize", fd, recognizeProgress);
+        recognizeResult.value = JSON.stringify(data, null, 2);
+        await refreshAll();
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message);
+      } finally {
+        recognizeUploading.value = false;
+      }
+    }
+
+    async function doVideoRecognize() {
+      const fd = new FormData();
+      fd.append("file", videoFile.value);
+      fd.append("camera_id", videoCamera.value);
+      videoLoading.value = true;
+      try {
+        const data = await uploadApi("/api/videos", fd, videoProgress);
+        videoResult.value = JSON.stringify(data, null, 2);
+        await refreshAll();
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message);
+      } finally {
+        videoLoading.value = false;
+      }
+    }
+
+    async function createRecord() {
+      if (!recordForm.person_id) return ElementPlus.ElMessage.warning("请选择人员");
+      try {
+        await api("/api/records/in-out", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(recordForm)
+        });
+        ElementPlus.ElMessage.success("提交成功");
+        await refreshAll();
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message);
+      }
+    }
+
+    async function handleAlert(row) {
+      try {
+        await api(`/api/alerts/${row.alert_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "handled", handler: userName.value || "admin" })
+        });
+        ElementPlus.ElMessage.success("已处理");
+        await refreshAll();
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message);
+      }
+    }
+
+    async function createUser() {
+      try {
+        await api("/api/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(userForm) });
+        ElementPlus.ElMessage.success("账号创建成功");
+        userForm.username = ""; userForm.password = ""; userForm.person_id = "";
+        users.value = await api("/api/users");
+      } catch (e) { ElementPlus.ElMessage.error(e.message); }
+    }
+
+    async function toggleUser(row) {
+      try {
+        await api(`/api/users/${row.user_id}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: row.status === "active" ? "disabled" : "active" }) });
+        users.value = await api("/api/users");
+      } catch (e) { ElementPlus.ElMessage.error(e.message); }
+    }
+
+    async function togglePerson(row) {
+      const nextStatus = row.employment_status === "active" ? "disabled" : "active";
+      try {
+        await api(`/api/persons/${row.person_id}/employment-status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: nextStatus })
+        });
+        ElementPlus.ElMessage.success(nextStatus === "active" ? "人员已恢复" : "人员已停用");
+        await refreshAll();
+      } catch (e) {
+        ElementPlus.ElMessage.error(e.message);
+      }
+    }
+
+    function roleText(value) { return { admin: "系统管理员", guard: "井口安检员", miner: "井下作业人员" }[value] || value; }
+
+    function displayStatus(person) {
+      if (!person) return "unknown";
+      const hasUnhandledAlert = alerts.value.some(alert => alert.person_id === person.person_id && alert.status === "unhandled");
+      return hasUnhandledAlert ? "abnormal" : (person.status || "unknown");
+    }
+    function statusText(s) {
+      return { underground: "井下", out: "出井", unknown: "未知", abnormal: "状态异常" }[s] || s;
+    }
+    function statusType(s) {
+      return { underground: "warning", out: "success", unknown: "info", abnormal: "danger" }[s] || "info";
+    }
+
+    onMounted(() => { /* 登录后自动刷新，这里不做事 */ });
+
+    return {
+      token, userName, role, roleName, loading, loginForm, page, menus, mobileMenus, mobileMenuOpen,
+      stat, healthResult, persons, cameras, records, alerts, users, userForm,
+      personForm, facePersonId, faceFile, faceResult, faceProgress, faceUploading,
+      recognizeCamera, recognizeFile, recognizeResult, recognizeProgress, recognizeUploading,
+      videoCamera, videoFile, videoResult, videoLoading, videoProgress,
+      recordForm,
+      doLogin, logout, switchPage, checkHealth,
+      createPerson, registerFace, doRecognize, doVideoRecognize,
+      createRecord, handleAlert, createUser, toggleUser, togglePerson, roleText, statusText, statusType, displayStatus
+    };
+  }
+}).use(ElementPlus, { locale: ElementPlusLocaleZhCn }).mount("#app");
+</script>
+</body>
+</html>
